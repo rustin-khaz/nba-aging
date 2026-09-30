@@ -1,0 +1,21 @@
+# Data (rebuild with download.py and run_sql.py)
+data/raw/
+*.duckdb
+*.log
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Jupyter
+notebooks/
+.ipynb_checkpoints/
+
+# Editors and OS
+.DS_Store
+.Rhistory
+.Rapp.history
+.vscode/
+.idea/
