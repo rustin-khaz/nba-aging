@@ -40,17 +40,19 @@ def project(res, who):
     return pd.DataFrame(out, columns=["slug", "proj", "lo", "hi"])
 
 
-def marcel(long, target, age_delta):
+def marcel(long, target, age_delta, horizon=1):
+    """Project `target` from the seasons up to target - horizon, adding one year of aging per season ahead."""
+    base_season = target - horizon
     k = long.weight.median()
-    last3 = long[long.season.between(target - 3, target - 1)]
-    last = last3[last3.season == target - 1]
+    last3 = long[long.season.between(base_season - 2, base_season)]
+    last = last3[last3.season == base_season]
     mu = np.average(last.value, weights=last.weight)
-    c = last3.season.map({target - 1: 5, target - 2: 4, target - 3: 3})
+    c = last3.season.map({base_season: 5, base_season - 1: 4, base_season - 2: 3})
     g = last3.assign(cw=c * last3.weight, cwx=c * last3.weight * last3.value).groupby("slug")[["cw", "cwx"]].sum()
     g = g.loc[g.index.isin(last.slug)]
     base = (g.cwx + k * mu) / (g.cw + k)
     age_last = last.set_index("slug").age
-    adj = age_last.map(age_delta).fillna(0.0)
+    adj = sum(age_last.add(i).map(age_delta).fillna(0.0) for i in range(horizon))
     mp_last = last.set_index("slug").mp.reindex(base.index)
     return pd.DataFrame({"slug": base.index, "proj": (base + adj.reindex(base.index)).values, "mp_last": mp_last.values})
 

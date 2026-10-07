@@ -32,6 +32,34 @@ def predict_fold(long, trans, T):
     return pd.concat(out).merge(truth[["slug", "value", "mp"]], on="slug").assign(season=T, resid=lambda d: d.value - d.proj)
 
 
+def backtest_horizons(long, trans, horizons=(1, 2, 3), targets=range(2023, 2027)):
+    """Score 1-, 2- and 3-season-ahead projections on the same target seasons.
+
+    Projecting season S from h seasons out may only use data through S - h,
+    and transitions whose second season is S - h or earlier.
+    """
+    rows, resid = [], []
+    for h in horizons:
+        for S in targets:
+            base = S - h
+            train = long[long.season <= base]
+            tt = trans[trans.season <= base - 1]
+            truth = long[(long.season == S) & long.slug.isin(long[long.season == base].slug)]
+            preds = {
+                "persistence": train[train.season == base][["slug", "value"]].rename(columns={"value": "proj"}),
+                "marcel_naive": marcel(train, S, age_deltas(tt, ipw=False), horizon=h),
+                "hybrid": marcel(train, S, age_deltas(tt, ipw=True), horizon=h),
+            }
+            for m, p in preds.items():
+                d = p.merge(truth[["slug", "value", "mp"]], on="slug")
+                rows.append({"horizon": h, "season": S, "model": m, "n": len(d),
+                             "rmse": np.sqrt(np.average((d.value - d.proj) ** 2, weights=d.mp)),
+                             "bias": np.average(d.value - d.proj, weights=d.mp)})
+                if m == "hybrid":
+                    resid.append(d.assign(horizon=h, season=S, resid=d.value - d.proj))
+    return pd.DataFrame(rows), pd.concat(resid)
+
+
 def backtest(long, trans):
     preds = pd.concat(predict_fold(long, trans, T) for T in TARGETS)
     h = preds[preds.model == "hybrid"]

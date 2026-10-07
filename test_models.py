@@ -99,6 +99,24 @@ def test_marcel_hand_example():
     assert abs(out["b"] - ((0 + 1500) / (5000 + 1000) - 0.2)) < 1e-9
 
 
+def test_marcel_two_seasons_ahead_adds_two_years_of_aging():
+    # Same data as above, but projecting season 4 from season 2: base is unchanged,
+    # and the age adjustment covers ages 27 and 28 for "a", 30 and 31 for "b".
+    long = pd.DataFrame({
+        "slug": ["a", "a", "a", "b"],
+        "season": [0, 1, 2, 2],
+        "age": [25, 26, 27, 30],
+        "value": [1.0, 2.0, 3.0, 0.0],
+        "weight": [1000.0] * 4,
+        "mp": [1000.0] * 4,
+    })
+    age_delta = pd.Series({27: -0.1, 28: -0.3, 30: -0.2, 31: -0.4})
+    one = marcel(long, target=3, age_delta=age_delta).set_index("slug").proj
+    two = marcel(long, target=4, age_delta=age_delta, horizon=2).set_index("slug").proj
+    assert abs(two["a"] - (one["a"] - 0.3)) < 1e-9
+    assert abs(two["b"] - (one["b"] - 0.4)) < 1e-9
+
+
 def test_intervals_cover_80pct_and_widen_for_low_minutes():
     rng = np.random.default_rng(3)
     def draw(n):
