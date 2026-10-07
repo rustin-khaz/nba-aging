@@ -20,6 +20,8 @@ Athletic skills go first. Steals peak around 23, and blocks peak even earlier.
 
 Playmaking, minutes and overall impact peak at 26 or 27. After that they decline slowly, then faster after 32.
 
+Shot-making, meaning how much better a player shoots than his shot locations alone would predict, holds steady until about 32 and then fades, to about 1.4 points below expected by 35. The usual method shows twice that drop.
+
 In practice, that means a 31-year-old shooter will hold on to his main skill longer than a 31-year-old who depends on getting to the rim or making plays on defense.
 
 ## 3. Aging risk for 2026-27
@@ -29,6 +31,10 @@ Among players 31 and older who played at least 1,500 minutes last season, the bi
 ![](docs/img/aging_risk.png)
 
 Every projection comes with an 80% range, and a typical range is about plus or minus 2 BPM, which is wide. I'd use this to rank risk, not as a precise forecast for any one player.
+
+Money changes which of these matter. Looking three seasons out and joining current contracts, Kawhi Leonard stands out: $165M owed through 2028-29 and a projected drop of 3.6 BPM. Kevin Durant ($90M, −2.4) and Jrue Holiday ($72M, −2.0) come next. Jokić's projected drop is similar in size, but he'd still be around 12 BPM, so it isn't a contract problem.
+
+![](docs/img/contract_risk.png)
 
 ## 4. How much to trust it
 
@@ -42,6 +48,8 @@ A more complex statistical model (mixed effects) did worse on every skill, so I 
 
 For shot selection (three-point rate and share of shots at the rim), "same as last season" was the best forecast. Players' shot habits barely change from year to year.
 
+Projecting further out is where the correction earns its keep. Three seasons ahead, it cuts the error on minutes by 12% compared to the usual curve, and its 80% ranges still contain the real outcome about 77% of the time.
+
 ## 5. Limitations
 
 The correction only accounts for what I can measure: age, performance and minutes. It can't see an injury nobody reported.
@@ -52,6 +60,6 @@ A player who sits out a season gets treated as having left the league.
 
 ## 6. What I'd do next
 
-1. Add contract data, so "projected decline" turns into "projected overpay."
-2. Extend the projections to two or three seasons out, where the survivorship correction matters most.
-3. Add a shot-quality model to separate shooting skill from shot selection.
+1. Add injury and games-missed data, so a player who didn't come back because he got hurt is treated differently from one who wasn't good enough.
+2. Put a plus-minus based impact measure next to BPM, which would cover more of defense.
+3. Let the aging curves differ by position or player type, since a rim-running big and a spot-up shooter probably don't age the same way.

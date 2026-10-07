@@ -11,15 +11,17 @@ OUT = Path("docs/img")
 SURFACE, INK, INK2, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#e4e3df"
 # Fixed identity colors: A / marcel_naive = naive curve, B / hybrid = corrected curve, C / mixed.
 COLOR = {"A": "#2a78d6", "B": "#eb6834", "C": "#1baf7a",
-         "marcel_naive": "#2a78d6", "hybrid": "#eb6834", "mixed": "#1baf7a"}
+         "marcel_naive": "#2a78d6", "hybrid": "#eb6834", "mixed": "#1baf7a", "persistence": "#8a8984"}
 METHOD = {"A": "Naive delta method", "B": "Survivorship-corrected (IPW)", "C": "Mixed-effects fixed curve"}
 MODEL = {"marcel_naive": "Marcel + naive curve", "hybrid": "Marcel + corrected curve (shipped)", "mixed": "Mixed-effects model"}
 STAT = {
     "bpm": "BPM (pts/100)", "fg3_pct": "3P%", "fg3a_rate": "3PA rate", "ft_pct": "FT%",
     "rim_fg_pct": "Rim FG%", "rim_share": "Rim shot share", "ast_pct": "AST%", "tov_pct": "TOV%",
     "drb_pct": "DRB%", "stl_pct": "STL%", "blk_pct": "BLK%", "mp": "Minutes",
+    "xfg_pct": "Shot quality (xFG%)", "shotmaking": "Shot-making",
 }
-PCT_0_1 = {"fg3_pct", "fg3a_rate", "ft_pct", "rim_fg_pct", "rim_share"}  # shown ×100 as points
+SKILLS = list(STAT)[:12]  # the 12 box-score skills; the two shot-model measures get their own chart
+PCT_0_1 = {"fg3_pct", "fg3a_rate", "ft_pct", "rim_fg_pct", "rim_share", "xfg_pct", "shotmaking"}  # shown ×100 as points
 
 plt.rcParams.update({
     "figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "savefig.facecolor": SURFACE,
@@ -60,7 +62,7 @@ def headline(curves):
 
 def small_multiples(curves):
     fig, axes = plt.subplots(3, 4, figsize=(12, 7.5))
-    for ax, stat in zip(axes.flat, STAT):
+    for ax, stat in zip(axes.flat, SKILLS):
         s = scaled(curves[(curves.stat == stat) & (curves.method == "B")], stat)
         ax.fill_between(s.age, s.lo, s.hi, color=COLOR["B"], alpha=0.15, linewidth=0)
         ax.plot(s.age, s.value, color=COLOR["B"], linewidth=2)
@@ -80,7 +82,7 @@ def backtest_chart(scores):
     s["gain"] = 100 * (1 - s.rmse / s.set_index(["stat", "season"]).index.map(base))
     g = s.groupby(["stat", "model"]).gain.mean().unstack()
     g = g.loc[g["hybrid"].sort_values().index]
-    fig, ax = plt.subplots(figsize=(8, 5.6))
+    fig, ax = plt.subplots(figsize=(8.5, 6.4))
     h = 0.26
     for i, m in enumerate(["marcel_naive", "hybrid", "mixed"]):
         ax.barh([y + (i - 1) * h for y in range(len(g))], g[m], height=h, color=COLOR[m], label=MODEL[m],
@@ -88,11 +90,11 @@ def backtest_chart(scores):
     ax.set_axisbelow(True)
     ax.set_yticks(range(len(g)), [STAT[x] for x in g.index])
     ax.axvline(0, color=INK2, linewidth=0.8)
-    ax.set_xlabel("% lower error than 'same as last season' (minutes-weighted RMSE, avg. of 2023 to 2026)")
+    ax.set_xlabel("% lower error than 'same as last season'\n(minutes-weighted RMSE, average of 2022-23 to 2025-26)")
     wins = int((g["hybrid"] > 0).sum())
-    ax.set_title(f"Backtest: the shipped model beats 'same as last season' on {wins} of {len(g)} skills")
+    ax.set_title(f"Backtest: the shipped model beats 'same as last season' on {wins} of {len(g)}")
     ax.grid(axis="y", visible=False)
-    ax.legend(loc="lower right", fontsize=9)
+    ax.legend(loc="upper left", fontsize=9)
     fig.tight_layout()
     fig.savefig(OUT / "backtest.png", dpi=160)
 
@@ -116,6 +118,70 @@ def risk_chart(proj, n=15, min_age=31):
     fig.savefig(OUT / "aging_risk.png", dpi=160)
 
 
+def shot_quality_chart(curves):
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+    for ax, stat in zip(axes, ["xfg_pct", "shotmaking"]):
+        for m in ["A", "B"]:
+            s = scaled(curves[(curves.stat == stat) & (curves.method == m)], stat)
+            ax.fill_between(s.age, s.lo, s.hi, color=COLOR[m], alpha=0.15, linewidth=0)
+            ax.plot(s.age, s.value, color=COLOR[m], linewidth=2, label=METHOD[m])
+        ax.axhline(0, color=INK2, linewidth=0.8)
+        ax.set_title(STAT[stat] + (" (FG% minus xFG%)" if stat == "shotmaking" else ""))
+        ax.set_xlabel("Age")
+    axes[0].set_ylabel("Change vs. age 27 (percentage points)")
+    axes[0].legend(loc="lower right", fontsize=9)
+    for ax in axes:
+        ax.set_xticks(range(20, 37, 2))
+    fig.suptitle("Shot-making fades after 32, and the naive curve doubles that decline", x=0.01, ha="left",
+                 fontweight="bold", fontsize=12)
+    fig.tight_layout()
+    fig.savefig(OUT / "shot_quality.png", dpi=160)
+
+
+def horizons_chart(hz):
+    g = hz.groupby(["stat", "horizon", "model"])[["rmse", "bias"]].mean().reset_index()
+    fig, (a, b) = plt.subplots(1, 2, figsize=(10, 4))
+    name = {"persistence": "Same as last season", "marcel_naive": "Marcel + naive curve",
+            "hybrid": "Marcel + corrected curve"}
+    for m in ["persistence", "marcel_naive", "hybrid"]:
+        s = g[(g.stat == "mp") & (g.model == m)]
+        a.plot(s.horizon, s.rmse, marker="o", color=COLOR[m], linewidth=2, label=name[m])
+    a.set_title("Minutes: projection error")
+    a.set_ylabel("Minutes-weighted RMSE (minutes)")
+    a.legend(fontsize=9)
+    for m in ["marcel_naive", "hybrid"]:
+        s = g[(g.stat == "bpm") & (g.model == m)]
+        b.plot(s.horizon, s.bias, marker="o", color=COLOR[m], linewidth=2, label=name[m])
+    b.axhline(0, color=INK2, linewidth=0.8)
+    b.set_title("BPM: average miss (actual minus projected)")
+    b.set_ylabel("BPM")
+    for ax in (a, b):
+        ax.set_xticks([1, 2, 3], ["1 season", "2 seasons", "3 seasons"])
+        ax.set_xlabel("How far ahead")
+    fig.suptitle("Projecting further ahead, the correction cuts more minutes error and BPM bias", x=0.01, ha="left",
+                 fontweight="bold", fontsize=12)
+    fig.tight_layout()
+    fig.savefig(OUT / "horizons.png", dpi=160)
+
+
+def contract_chart(cr, min_age=31, n_labels=10):
+    d = cr[(cr.age_2027 >= min_age) & (cr.mp_last >= 1500)].copy()
+    d["owed"] = d.salary_2027_2029 / 1e6
+    fig, ax = plt.subplots(figsize=(8, 5.2))
+    ax.scatter(d.owed, d.bpm_change_by_2029, s=36, color=COLOR["B"], alpha=0.8, edgecolors=SURFACE, linewidths=1)
+    for _, r in pd.concat([d.nlargest(n_labels, "owed"), d.nsmallest(1, "bpm_change_by_2029")]).iterrows():
+        ax.annotate(r.player, (r.owed, r.bpm_change_by_2029), xytext=(5, 3), textcoords="offset points",
+                    fontsize=8, color=INK)
+    ax.axhline(0, color=INK2, linewidth=0.8)
+    ax.set_xlabel("Salary owed 2026-27 through 2028-29 ($M)")
+    ax.set_ylabel("Projected BPM change, 2025-26 to 2028-29")
+    ax.set_title(f"Who's paid the most through their decline (players {min_age}+)")
+    fig.text(0.01, 0.01, "Players with 1,500+ minutes in 2025-26. Salaries from Basketball-Reference.",
+             color=INK2, fontsize=8)
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.savefig(OUT / "contract_risk.png", dpi=160)
+
+
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     curves = pd.read_csv("exports/aging_curves.csv")
@@ -123,4 +189,7 @@ if __name__ == "__main__":
     small_multiples(curves)
     backtest_chart(pd.read_csv("exports/backtest.csv"))
     risk_chart(pd.read_csv("exports/projections_2026_27.csv"))
+    shot_quality_chart(curves)
+    horizons_chart(pd.read_csv("exports/backtest_horizons.csv"))
+    contract_chart(pd.read_csv("exports/contract_risk.csv"))
     print("wrote", sorted(p.name for p in OUT.glob("*.png")))
