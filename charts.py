@@ -88,7 +88,7 @@ def backtest_chart(scores):
     ax.set_axisbelow(True)
     ax.set_yticks(range(len(g)), [STAT[x] for x in g.index])
     ax.axvline(0, color=INK2, linewidth=0.8)
-    ax.set_xlabel("% lower error than 'same as last season' (minutes-weighted RMSE, avg. of 2023–2026)")
+    ax.set_xlabel("% lower error than 'same as last season' (minutes-weighted RMSE, avg. of 2023 to 2026)")
     wins = int((g["hybrid"] > 0).sum())
     ax.set_title(f"Backtest: the shipped model beats 'same as last season' on {wins} of {len(g)} skills")
     ax.grid(axis="y", visible=False)
