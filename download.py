@@ -39,6 +39,27 @@ def fetch_br(season: int, kind: str) -> None:
     time.sleep(4)  # BR allows ~20 requests/minute
 
 
+def fetch_contracts() -> None:
+    """Current contracts (salary by future season) from BR's league-wide contracts page."""
+    out = RAW / "br" / "contracts.parquet"
+    if out.exists():
+        return
+    r = requests.get("https://www.basketball-reference.com/contracts/players.html", headers=HEADERS, timeout=30)
+    r.raise_for_status()
+    r.encoding = "utf-8"
+    df = pd.read_html(io.StringIO(r.text), attrs={"id": "player-contracts"}, extract_links="body", header=[0, 1])[0]
+    df.columns = [b if a.startswith("Unnamed") else f"salary_{int(b[:4]) + 1}" for a, b in df.columns]  # 2026-27 -> 2027
+    slug = df["Player"].map(lambda c: c[1].rsplit("/", 1)[-1].removesuffix(".html") if c[1] else None)
+    df = df.map(lambda c: c[0])
+    money = [c for c in df.columns if c.startswith("salary_")] + ["Guaranteed"]
+    df[money] = df[money].apply(lambda col: pd.to_numeric(col.str.replace(r"[$,]", "", regex=True), errors="coerce"))
+    df.insert(0, "slug", slug)
+    df = df[df["slug"].notna()].drop(columns="Rk").rename(columns={"Player": "player", "Tm": "team", "Guaranteed": "guaranteed"})
+    out.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(out, index=False)
+    time.sleep(4)
+
+
 def fetch_shots(season: int) -> None:
     out = RAW / "shots" / f"shots_{season}.parquet"
     if out.exists():
@@ -61,3 +82,5 @@ if __name__ == "__main__":
             fetch_br(s, kind)
         fetch_shots(s)
         print(f"{s} done", flush=True)
+    fetch_contracts()
+    print("contracts done", flush=True)
