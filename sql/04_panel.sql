@@ -1,5 +1,7 @@
 CREATE OR REPLACE TABLE panel AS
-SELECT br.*, s.rim_fga,
+SELECT br.*, s.rim_fga, s.fga_shots,
+       s.xfgm / nullif(s.fga_shots, 0) AS xfg_pct,
+       (s.fgm_shots - s.xfgm) / nullif(s.fga_shots, 0) AS shotmaking,
        s.rim_fgm / nullif(s.rim_fga, 0) AS rim_fg_pct,
        s.rim_fga / nullif(s.fga_shots, 0) AS rim_share,
        s.corner3a / nullif(s.fga_shots, 0) AS corner3_share,
@@ -14,7 +16,8 @@ WITH l AS (
         ('bpm', bpm, mp), ('fg3_pct', fg3_pct, fg3a), ('fg3a_rate', fg3a_rate, fga),
         ('ft_pct', ft_pct, fta), ('rim_fg_pct', rim_fg_pct, rim_fga), ('rim_share', rim_share, fga),
         ('ast_pct', ast_pct, mp), ('tov_pct', tov_pct, mp), ('drb_pct', drb_pct, mp),
-        ('stl_pct', stl_pct, mp), ('blk_pct', blk_pct, mp), ('mp', mp, 1)
+        ('stl_pct', stl_pct, mp), ('blk_pct', blk_pct, mp), ('mp', mp, 1),
+        ('xfg_pct', xfg_pct, fga_shots), ('shotmaking', shotmaking, fga_shots)
     ) s(stat, value, weight)
 )
 SELECT * FROM l WHERE mp >= 250 AND value IS NOT NULL AND weight > 0;

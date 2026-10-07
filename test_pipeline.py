@@ -51,7 +51,15 @@ def test_rim_share_is_a_share():
 
 def test_panel_long_filters():
     r = q("SELECT min(mp) mp, min(weight) w, count(*) FILTER (value IS NULL) n_null, count(DISTINCT stat) k FROM panel_long")
-    assert r.mp[0] >= 250 and r.w[0] > 0 and r.n_null[0] == 0 and r.k[0] == 12
+    assert r.mp[0] >= 250 and r.w[0] > 0 and r.n_null[0] == 0 and r.k[0] == 14
+
+
+def test_expected_fg_is_calibrated():
+    # xFG comes from league make rates by season/zone/distance, so league-wide it must match actual FG%,
+    # and shot-making (actual minus expected) must average out to zero across all shots.
+    r = q("SELECT season, sum(xfgm) / sum(fga_shots) x, sum(fgm_shots) / sum(fga_shots) a FROM shot_skills GROUP BY 1")
+    assert (abs(r.x - r.a) < 0.002).all()
+    assert q("SELECT min(xfg_pct) lo, max(xfg_pct) hi FROM panel WHERE fga_shots >= 200").pipe(lambda d: 0.3 < d.lo[0] and d.hi[0] < 0.8)
 
 
 def test_transitions_match_independent_pandas_recompute():
