@@ -4,6 +4,8 @@
 
 I built aging curves for 12 basketball skills across 26 seasons (2000-01 through 2025-26), corrected them for survivorship bias, and used them to project every player one, two and three seasons ahead with 80% intervals. Then I backtested the projections against seasons that already happened, to see whether any of it actually works. On top of that there's an expected-FG% shot model, current contract data, and a weighted refit of the mixed model in R.
 
+[Interactive Tableau Public dashboard](https://public.tableau.com/app/profile/rustin.khazravi/viz/NBAAgingCurves/HowNBAPlayersAgeSurvivorship-CorrectedCurvesandContractRisk): pick any skill to compare the naive and corrected curves, plus the contract-risk view.
+
 Stack: Python (pandas, statsmodels, scikit-learn), SQL in DuckDB, R (lme4), pytest, and CSV exports shaped for Tableau.
 Data: 12,810 player-seasons from Basketball-Reference, 5.2M shots from NBA shot-chart data, and current contracts from Basketball-Reference.
 
