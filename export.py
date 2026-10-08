@@ -131,6 +131,29 @@ def contract_risk():
     print(f"wrote {len(out)} contract rows")
 
 
+def tableau_files():
+    """Small, readable CSVs for the Tableau Public dashboard (exports/tableau_*.csv)."""
+    from charts import PCT_0_1, STAT
+    method = {"A": "Naive delta method", "B": "Survivorship-corrected", "C": "Mixed-effects model"}
+    c = pd.read_csv("exports/aging_curves.csv")
+    k = c.stat.isin(PCT_0_1).map({True: 100, False: 1})
+    c = c.assign(skill=c.stat.map(STAT), method=c.method.map(method),
+                 change=c.value * k, low=c.lo * k, high=c.hi * k)
+    c[["skill", "age", "method", "change", "low", "high"]].to_csv("exports/tableau_curves.csv", index=False)
+
+    m = pd.read_csv("exports/projections_multiyear.csv")
+    b = m[m.stat == "bpm"]
+    label = {2026: "2025-26", 2027: "2026-27", 2028: "2027-28", 2029: "2028-29"}
+    actual = b[b.horizon == 1].assign(season=2026, age=lambda d: d.age - 1, bpm=lambda d: d.current, low=np.nan,
+                                      high=np.nan, kind="Actual")
+    proj = b.assign(bpm=b.projection, low=b.lo, high=b.hi, kind="Projected")
+    t = pd.concat([actual, proj]).assign(season=lambda d: d.season.map(label))
+    t[["player", "team", "season", "age", "kind", "bpm", "low", "high", "mp_last"]].rename(
+        columns={"mp_last": "minutes_2025_26"}).to_csv("exports/tableau_bpm_projections.csv", index=False)
+    print("wrote exports/tableau_curves.csv and exports/tableau_bpm_projections.csv")
+
+
 if __name__ == "__main__":
     main()
     contract_risk()
+    tableau_files()
